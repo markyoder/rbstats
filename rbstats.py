@@ -56,6 +56,38 @@ def rb_cdfs(rblen=100, nits=10000):
 	#
 	rb_vals = numpy.core.records.fromarrays(zip(*rb_vals), names=dtype_names, formats=[type(x).__name__ for x in rb_vals[0]])
 	return rb_vals
+#
+def rb_ratio(rb_seq, log_norm=True):
+	#print rb_seq
+	rb_gt = [rb_seq[0]]
+	rb_lt = [rb_seq[0]]
+	#
+	[rb_gt.append(x) for x in rb_seq if x>rb_gt[-1]]
+	[rb_lt.append(x) for x in rb_seq if x<rb_lt[-1]]
+	#print "**", rb_gt
+	#
+	if log_norm==False or len(rb_seq)==1:
+		return float(len(rb_gt))/float(len(rb_lt))
+	if log_norm:
+		return math.log10(float(len(rb_gt))/float(len(rb_lt)))/(math.log10(float(len(rb_seq))))
+#
+def rb_runs(rblen=1, seq_len=100000, log_norm=True):
+	# churn up som statistics on rb "runs", aka sequences of 1,0 values (in this case,
+	# well use 1 = (ratio>1), -1 = (ratio<1), and 0: ratio=1 ???
+	#
+	R=random.Random()
+	sequence = [R.random() for x in xrange(seq_len)]
+	#
+	rb_ratios = [rb_ratio(sequence[i-rblen:i], log_norm=log_norm) for i in xrange(rblen, seq_len)]
+	runs_gt = []
+	runs_lt = []
+	runs_0  = []
+	#
+	j=0
+	while j<seq_len:
+		pass
+	#
+	return rb_ratios
 	
 def randtest():
 	R1=random.Random()
