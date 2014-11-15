@@ -79,16 +79,28 @@ def rb_runs(rblen=1, seq_len=100000, log_norm=True):
 	sequence = [R.random() for x in xrange(seq_len)]
 	#
 	rb_ratios = [rb_ratio(sequence[i-rblen:i], log_norm=log_norm) for i in xrange(rblen, seq_len)]
-	runs_gt = []
-	runs_lt = []
-	runs_0  = []
+	#runs_gt = []
+	#runs_lt = []
+	#runs_0  = []
+	runs = {-1:[], 1:[], 0:[]}	# parity lists
 	#
-	j=0
-	while j<seq_len:
-		pass
+	j=1
+	parity = tri_parity(rb_ratios[0])
+	this_list = rb_ratios[0]	
+	#while j<seq_len:
+	for j, x in enumerate(rb_ratios):
+		#pass
+		if tri_parity(x)!=parity:
+			# new run.
+		
 	#
 	return rb_ratios
-	
+#
+def tri_parity(x):
+	if x<0: return -1
+	if x==0: return 0
+	if x>0: return 1
+#	
 def randtest():
 	R1=random.Random()
 	R2=random.Random()
