@@ -229,8 +229,7 @@ def tohoku_rb_report(tohoku_file='data/tohoku_rb_sequence.pkl', rb_len=220, fnum
 	plt.figure(fnum+1)
 	plt.clf()
 	#
-	#tohoku_rb_sequence = [math.log10(x)/log_rb_len for x in rb_ratios_raw]
-	tohoku_rb_sequence = [math.log10(x)/log_rb_len for x in rb_ratios_maybe_averaged]
+	tohoku_rb_sequence = [math.log10(x)/log_rb_len for x in rb_ratios_raw]
 	# rb_runs(rb_ratios=tohoku_rb_sequence, rblen=1, seq_len=100000, log_norm=True)
 	tohoku_runs = rb_runs(rb_ratios=tohoku_rb_sequence)
 	random_runs = rb_runs(rb_ratios=None, rblen=rb_len, seq_len=random_len, log_norm=True)
