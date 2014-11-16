@@ -74,6 +74,8 @@ def rb_ratio(rb_seq, log_norm=True):
 def rb_runs(rblen=1, seq_len=100000, log_norm=True):
 	# churn up som statistics on rb "runs", aka sequences of 1,0 values (in this case,
 	# well use 1 = (ratio>1), -1 = (ratio<1), and 0: ratio=1 ???
+	rblen = int(rblen)
+	seq_len = int(seq_len)
 	#
 	R=random.Random()
 	sequence = [R.random() for x in xrange(seq_len)]
@@ -84,17 +86,66 @@ def rb_runs(rblen=1, seq_len=100000, log_norm=True):
 	#runs_0  = []
 	runs = {-1:[], 1:[], 0:[]}	# parity lists
 	#
-	j=1
 	parity = tri_parity(rb_ratios[0])
-	this_list = rb_ratios[0]	
+	this_list = [rb_ratios[0]]	
 	#while j<seq_len:
-	for j, x in enumerate(rb_ratios):
+	for j, x in enumerate(rb_ratios[1:]):
 		#pass
 		if tri_parity(x)!=parity:
 			# new run.
-		
+			if len(this_list)>1: runs[parity]+=[this_list]	# not interested in len(1) runs...
+			parity=tri_parity(x)
+			this_list=[]
+		#
+		#print x
+		this_list+=[x]
 	#
-	return rb_ratios
+	#for key, rw in runs.iteritems():
+	#	print key, len(rw), " :: ", float(len(rw))/float(seq_len)
+	#
+	return runs
+
+def rb_runs_report(rb_runs_data=None, rblen=128, seq_len=100000, log_norm=True, fignum=0):
+	# some stats on record-breaking runs.
+	if rb_runs_data==None: rb_runs_data = rb_runs(rblen=rblen, seq_len=seq_len, log_norm=log_norm)
+	plt.figure(fignum)
+	plt.ion()
+	plt.clf()
+	#
+	# number of runs for gt,lt,0.
+	# stats on length of runs.
+	run_stats = {key:{} for key in rb_runs_data.iterkeys()}
+	#
+	for key, datas in rb_runs_data.iteritems():
+		# number of runs:
+		run_stats[key]['n_runs'] = len(datas)
+		#
+		run_stats[key]['run_lengths'] = [len(x) for x in datas]
+		#
+		# mean run length:
+		run_stats[key]['mean_run_len'] = numpy.mean(run_stats[key]['run_lengths'])
+		run_stats[key]['std_run_len']  = numpy.std(run_stats[key]['run_lengths'])
+		run_stats[key]['med_run_len']  = numpy.median(run_stats[key]['run_lengths'])
+		run_stats[key]['mode_run_len'] = scipy.stats.mode(run_stats[key]['run_lengths'])
+		#
+		these_lengths = [x for x in run_stats[key]['run_lengths']]
+		Ns = [x/float(len(these_lengths)) for x in range(1, len(these_lengths)+1)]
+		these_lengths.sort()
+		#plt.gca().set_yscale('log')
+		#plt.gca().set_xscale('log')
+		plt.gca().set_yscale('linear')
+		plt.gca().set_xscale('linear')
+		plt.plot(these_lengths, Ns, '.-', label='parity: %d' % key)
+		#
+	plt.legend(loc=0, numpoints=1)
+	plt.ylabel('Probability P(L)')
+	plt.xlabel('Length L')
+	#
+	print "summary report:"
+	for key, datas in run_stats.iteritems():
+		print key, {ky:val for ky,val in datas.iteritems() if ky!='run_lengths'}
+	#
+	return run_stats
 #
 def tri_parity(x):
 	if x<0: return -1
