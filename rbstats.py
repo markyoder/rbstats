@@ -39,8 +39,33 @@ def plot_rb_cdfs(cdf_in=None, rblen=100, nits=10000, fnum=0, do_clf=True):
 	#
 	return cdf_in
 #
+def nrb_sequence(sequence_in=None, rb_len=10, seq_len=10000):
+	if sequence_in==None:
+		R=random.Random()
+		sequence_in = [R.random() for j in xrange(seq_len)]
+	#
+	dtype_names = ['i', 'n_gt', 'n_lt', 'ratio', 'ratio_lognorm']
+	rb_vals=[]
+	log_N = math.log10(rb_len)
+	for i in xrange(rb_len, len(sequence_in)+1):
+		rb_gt=[sequence_in[i-rb_len]]
+		rb_lt=[sequence_in[i-rb_len]]
+		#
+		[rb_gt.append(x) for x in sequence_in[i-rb_len:i] if x>rb_gt[-1]]
+		[rb_lt.append(x) for x in sequence_in[i-rb_len:i] if x<rb_lt[-1]]
+		#
+		rb_vals += [[i-1, len(rb_gt), len(rb_lt)]]
+		rb_vals[-1]+=[float(rb_vals[-1][-2])/float(rb_vals[-1][-1])]
+		rb_vals[-1]+=[math.log10(rb_vals[-1][-1])/log_N]
+	rb_vals = numpy.core.records.fromarrays(zip(*rb_vals), names=dtype_names, formats=[type(x).__name__ for x in rb_vals[0]])
+	return rb_vals	
+		
+#
 def rb_cdfs(rblen=100, nits=10000):
-	# stats on record-breaking statos of a random sequence.
+	# stats on record-breaking ratios of a random sequence.
+	# so what this bit does now (after being chopped up a bit) is to produce a sequence of 
+	# rb_intervals from nits sequences of length rblen.
+	#
 	R=random.Random()
 	#
 	rb_vals = []
@@ -48,7 +73,8 @@ def rb_cdfs(rblen=100, nits=10000):
 	log_N = math.log10(rblen)
 	#
 	for i in xrange(nits):
-		vals = [R.random() for j in xrange(nits)]
+		#vals = [R.random() for j in xrange(nits)]
+		vals = [R.random() for j in xrange(rblen)]
 		rb_gt = [vals[0]]
 		rb_lt = [vals[0]]
 		#
@@ -229,18 +255,36 @@ def tohoku_rb_report(tohoku_file='data/tohoku_rb_sequence.pkl', rb_len=220, fnum
 	plt.figure(fnum+1)
 	plt.clf()
 	#
-	#tohoku_rb_sequence = [math.log10(x)/log_rb_len for x in rb_ratios_raw]
-	tohoku_rb_sequence = [math.log10(x)/log_rb_len for x in rb_ratios_maybe_averaged]
+	tohoku_rb_sequence = [math.log10(x)/log_rb_len for x in rb_ratios_raw]
+	tohoku_rb_sequence_mean = [math.log10(x)/log_rb_len for x in rb_ratios_maybe_averaged]
+	# now, make a random sequence averaged as if a proper rb sequence:
+	#R=random.Random()
+	#ave_len = int(rb_len/10)
+	#random_sequence = [R.random() for i in xrange(random_len)]
+	random_sequence = nrb_sequence(rb_len=rb_len, seq_len=random_len)
+	for i,x in random_sequence['ratio_lognorm']:
+		random_sequence['ratio_lognorm'][i] = numpy.mean(random_sequence['ratio_lognorm'][max(0,i-rb_len):i+1])
+	#
+	#print "rand averaged len: ", len(random_averaged)
+	#
 	# rb_runs(rb_ratios=tohoku_rb_sequence, rblen=1, seq_len=100000, log_norm=True)
 	tohoku_runs = rb_runs(rb_ratios=tohoku_rb_sequence)
 	random_runs = rb_runs(rb_ratios=None, rblen=rb_len, seq_len=random_len, log_norm=True)
+	#
+	tohoku_runs_mean = rb_runs(rb_ratios=tohoku_rb_sequence_mean)
+	#random_runs_mean = rb_runs(rb_ratios=random_averaged)
+	#
 	##
 	#random_run_stats = rb_runs_report(rb_runs_data=None, rblen=rb_len, seq_len=random_len, log_norm=True, doplots=False)
 	random_run_stats = rb_runs_report(random_runs, doplots=False)
 	tohoku_run_stats = rb_runs_report(rb_runs_data=tohoku_runs, rblen=rb_len, log_norm=True, doplots=False)
 	
 	tohoku2 = rb_runs_report(rb_runs_data=tohoku_runs, rblen=rb_len, log_norm=True, doplots=True, fignum=7, do_clf=True)
-	random_run_stats = rb_runs_report(random_runs, doplots=True, do_clf=False, fignum=7)	
+	random_run_stats = rb_runs_report(random_runs, doplots=True, do_clf=False, fignum=7)
+	
+	tohoku3 = rb_runs_report(rb_runs_data=tohoku_runs_mean, rblen=rb_len, log_norm=True, doplots=True, fignum=8, do_clf=True)
+	#random_run_stats = rb_runs_report(random_runs_mean, doplots=True, do_clf=False, fignum=8)
+
 	#
 	return tohoku2
 	return rb_data
