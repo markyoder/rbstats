@@ -261,9 +261,8 @@ def tohoku_rb_report(tohoku_file='data/tohoku_rb_sequence.pkl', rb_len=220, fnum
 	#R=random.Random()
 	#ave_len = int(rb_len/10)
 	#random_sequence = [R.random() for i in xrange(random_len)]
-	random_sequence = nrb_sequence(rb_len=rb_len, seq_len=random_len)
-	for i,x in random_sequence['ratio_lognorm']:
-		random_sequence['ratio_lognorm'][i] = numpy.mean(random_sequence['ratio_lognorm'][max(0,i-rb_len):i+1])
+	random_sequence = nrb_sequence(rb_len=rb_len, seq_len=random_len)['ratio_lognorm']
+	random_sequence_mean = [numpy.mean(random_sequence[i-rb_len:i]) for i in xrange(rb_len,len(random_sequence)+1)]
 	#
 	#print "rand averaged len: ", len(random_averaged)
 	#
@@ -272,7 +271,7 @@ def tohoku_rb_report(tohoku_file='data/tohoku_rb_sequence.pkl', rb_len=220, fnum
 	random_runs = rb_runs(rb_ratios=None, rblen=rb_len, seq_len=random_len, log_norm=True)
 	#
 	tohoku_runs_mean = rb_runs(rb_ratios=tohoku_rb_sequence_mean)
-	#random_runs_mean = rb_runs(rb_ratios=random_averaged)
+	random_runs_mean = rb_runs(rb_ratios=random_sequence_mean)
 	#
 	##
 	#random_run_stats = rb_runs_report(rb_runs_data=None, rblen=rb_len, seq_len=random_len, log_norm=True, doplots=False)
@@ -281,12 +280,14 @@ def tohoku_rb_report(tohoku_file='data/tohoku_rb_sequence.pkl', rb_len=220, fnum
 	
 	tohoku2 = rb_runs_report(rb_runs_data=tohoku_runs, rblen=rb_len, log_norm=True, doplots=True, fignum=7, do_clf=True)
 	random_run_stats = rb_runs_report(random_runs, doplots=True, do_clf=False, fignum=7)
+	plt.title('raw runs (tohoku then random')
 	
 	tohoku3 = rb_runs_report(rb_runs_data=tohoku_runs_mean, rblen=rb_len, log_norm=True, doplots=True, fignum=8, do_clf=True)
-	#random_run_stats = rb_runs_report(random_runs_mean, doplots=True, do_clf=False, fignum=8)
+	random_run_stats = rb_runs_report(random_runs_mean, doplots=True, do_clf=False, fignum=8)
+	plt.title('mean runs (tohoku, then random)')
 
 	#
-	return tohoku2
+	#return tohoku2
 	return rb_data
 #
 def lognorm_ratio(num, denom=None, N=1):
