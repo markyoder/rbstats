@@ -209,11 +209,16 @@ def rb_runs_report(rb_runs_data=None, rblen=128, seq_len=100000, log_norm=True, 
 	#
 	return run_stats
 #
+# instead of writing a wrapper function, just defind the prams dictionary:
+parkfield_rb_report_prams = {'data_file':'data/parkfield-elip-rbsequence.pkl', 'rb_len':310, 'fnum':0, 'random_len':100000, 'ave_len':None}
+emc_rb_report_prams = {'data_file':'data/emc_rb_sequence.pkl', 'rb_len':500, 'fnum':0, 'random_len':100000, 'ave_len':None}
+tohoku_rb_report_prams = {'data_file':'data/tohoku_rb_sequence.pkl', 'rb_len':220, 'fnum':0, 'random_len':100000, 'ave_len':None}
+#
 def chi_chi_rb_report(data_file='data/chichi-rb_sequence.pkl', rb_len=630, fnum=0, random_len=10000, ave_len=None):
 	return rb_stats_report(data_file=data_file, rb_len=rb_len, fnum=fnum, random_len=random_len)
 
 def tohoku_rb_report(data_file='data/tohoku_rb_sequence.pkl', rb_len=220, fnum=0, random_len=10000, ave_len=None):
-	return rb_stats_report(data_file=data_file, rb_len=rb_len, fnum=fnum, random_len=random_len)
+	return rb_stats_report(data_file=data_file, rb_len=rb_len, fnum=fnum, random_len=random_len, ave_len=ave_len)
 	#return rb_stats_report(*args, **kwargs)
 #
 def rb_stats_report(data_file='data/tohoku_rb_sequence.pkl', rb_len=220, fnum=0, random_len=10000, ave_len=None):
@@ -258,6 +263,8 @@ def rb_stats_report(data_file='data/tohoku_rb_sequence.pkl', rb_len=220, fnum=0,
 	plt.figure(fnum)
 	plt.ion()
 	plt.clf()
+	plt.xlabel('normalized rb_ratio value, $abs(nrb_{gt}/nrb_{lt})$')
+	plt.ylabel('Probability $P(abs[r])$')
 	#
 	#Y = [x/float(len(tohoku_rb_gt)) for x in xrange(1, len(tohoku_rb_gt)+1)]	# prob assuming gt...
 	Y = [x/N_total for x in xrange(1, len(tohoku_rb_gt)+1)]						# prob within full sequence.
@@ -323,7 +330,11 @@ def rb_stats_report(data_file='data/tohoku_rb_sequence.pkl', rb_len=220, fnum=0,
 	plt.clf()
 	#
 	tohoku_rb_sequence = [math.log10(x)/log_rb_len for x in rb_ratios_raw]
-	tohoku_rb_sequence_mean = [math.log10(x)/log_rb_len for x in rb_ratios_maybe_averaged]
+	tohoku_rb_sequence_mean = running_mean(tohoku_rb_sequence, ave_len)
+	#tohoku_rb_sequence_mean = [math.log10(x)/log_rb_len for x in rb_ratios_maybe_averaged]
+	
+	#return [tohoku_rb_sequence, tohoku_rb_sequence_mean]
+	
 	# now, make a random sequence averaged as if a proper rb sequence:
 	#
 	random_sequence = nrb_sequence(rb_len=rb_len, seq_len=random_len)['ratio_lognorm']
@@ -352,6 +363,16 @@ def rb_stats_report(data_file='data/tohoku_rb_sequence.pkl', rb_len=220, fnum=0,
 	#
 	#return tohoku2
 	return rb_data
+#
+def running_mean(data_in=None, mean_len=2):
+	# return a running mean over mean_len elements. this will return the "best attempt" for the first mean_len
+	# elements (aka average them over as many values as possible. if we wan to be more thorough, we can 1) make this optional
+	# (though it's easy enough to trim it on the calling side), and 2) account for this by returning the variance.
+	#
+	if data_in==None: return []
+	if len(data_in)<2: return data_in 
+	#
+	return [numpy.mean(data_in[max(0, i-mean_len):i]) for i in xrange(1,len(data_in)+1)]
 #
 def lognorm_ratio(num, denom=None, N=1):
 	#return math.log10(float(len(rb_gt))/float(len(rb_lt)))/(math.log10(float(len(rb_seq))))
