@@ -90,8 +90,9 @@ def random_rb_sequence(rblen=100, nits=10000):
 		rb_gt = [vals[0]]
 		rb_lt = [vals[0]]
 		#
-		[rb_gt.append(x) for x in vals if x>rb_gt[-1]]
-		[rb_lt.append(x) for x in vals if x<rb_lt[-1]] 
+		# get greater/lesser record-breaking sub-sequences.
+		[rb_gt.append(x) for x in vals[1:] if x>rb_gt[-1]]
+		[rb_lt.append(x) for x in vals[1:] if x<rb_lt[-1]] 
 		#
 		rb_vals += [[i, len(rb_gt), len(rb_lt)]]
 		rb_vals[-1]+=[float(rb_vals[-1][-2])/float(rb_vals[-1][-1])]
@@ -155,9 +156,11 @@ def rb_runs(rb_ratios=None, rblen=1, seq_len=100000, log_norm=True):
 	#
 	return runs
 
-def rb_runs_report(rb_runs_data=None, rblen=128, seq_len=100000, log_norm=True, fignum=0, doplots=True, do_clf=True):
+def rb_runs_report(rb_runs_data=None, rblen=128, seq_len=100000, log_norm=True, fignum=0, doplots=True, do_clf=True, cat_name='(test catalog)'):
 	# some stats on record-breaking runs.
-	if rb_runs_data==None: rb_runs_data = rb_runs(rblen=rblen, seq_len=seq_len, log_norm=log_norm)
+	if rb_runs_data==None:
+		# in default mode, this will produce a record-breaking sequence from a random catalog.
+		rb_runs_data = rb_runs(rblen=rblen, seq_len=seq_len, log_norm=log_norm)
 	if doplots:
 		plt.figure(fignum)
 		plt.ion()
@@ -202,6 +205,7 @@ def rb_runs_report(rb_runs_data=None, rblen=128, seq_len=100000, log_norm=True, 
 		plt.legend(loc=0, numpoints=1)
 		plt.ylabel('Probability P(L)')
 		plt.xlabel('Length L')
+		plt.title('record-breaking runs report for %s' % test_catalog)
 	#
 	print "summary report:"
 	for key, datas in run_stats.iteritems():
@@ -221,7 +225,7 @@ def tohoku_rb_report(data_file='data/tohoku_rb_sequence.pkl', rb_len=220, fnum=0
 	return rb_stats_report(data_file=data_file, rb_len=rb_len, fnum=fnum, random_len=random_len, ave_len=ave_len)
 	#return rb_stats_report(*args, **kwargs)
 #
-def rb_stats_report(data_file='data/tohoku_rb_sequence.pkl', rb_len=220, fnum=0, random_len=10000, ave_len=None):
+def rb_stats_report(data_file='data/tohoku_rb_sequence.pkl', rb_len=220, fnum=0, random_len=10000, ave_len=None, cat_name='(tohoku)'):
 	# we'll need to encode some of these data, but for now, we know that rb_len was 220 (probably).
 	# (a good guess for this is the first event number rw_0,item_0=219).
 	# ... so this generalized function was orignally written for Tohoku, so "tohoku" probably impies "test data",
@@ -268,11 +272,11 @@ def rb_stats_report(data_file='data/tohoku_rb_sequence.pkl', rb_len=220, fnum=0,
 	#
 	#Y = [x/float(len(tohoku_rb_gt)) for x in xrange(1, len(tohoku_rb_gt)+1)]	# prob assuming gt...
 	Y = [x/N_total for x in xrange(1, len(tohoku_rb_gt)+1)]						# prob within full sequence.
-	plt.plot(tohoku_rb_gt, Y, '.-', label='tohoku_gt')
+	plt.plot(tohoku_rb_gt, Y, '.-', label='%s_gt' % cat_name)
 	#
 	#Y = [x/float(len(tohoku_rb_lt)) for x in xrange(1, len(tohoku_rb_lt)+1)]
 	Y = [x/N_total for x in xrange(1, len(tohoku_rb_lt)+1)]
-	plt.plot(tohoku_rb_lt, Y, '.-', label='tohoku_lt')
+	plt.plot(tohoku_rb_lt, Y, '.-', label='%s_lt' % cat_name)
 	#
 	#Y = [x/float(len(tohoku_rb_eq)) for x in xrange(1, len(tohoku_rb_eq)+1)]
 	#Y = [x/N_total for x in xrange(1, len(tohoku_rb_eq)+1)]
@@ -280,10 +284,10 @@ def rb_stats_report(data_file='data/tohoku_rb_sequence.pkl', rb_len=220, fnum=0,
 	#
 	# and the means...
 	Y = [x/N_total for x in xrange(1, len(tohoku_rb_gt_mean)+1)]						# prob within full sequence.
-	plt.plot(tohoku_rb_gt_mean, Y, '.-', label='tohoku_gt_mean')
+	plt.plot(tohoku_rb_gt_mean, Y, '.-', label='%s_gt_mean' % cat_name)
 	#
 	Y = [x/N_total for x in xrange(1, len(tohoku_rb_lt_mean)+1)]
-	plt.plot(tohoku_rb_lt_mean, Y, '.-', label='tohoku_lt_mean')
+	plt.plot(tohoku_rb_lt_mean, Y, '.-', label='%s_lt_mean' % cat_name)
 	#
 	#Y = [x/N_total for x in xrange(1, len(tohoku_rb_eq_mean)+1)]
 	#plt.plot(tohoku_rb_eq_mean, Y, '.-', label='tohoku_eq')
