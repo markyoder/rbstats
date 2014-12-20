@@ -66,8 +66,8 @@ def nrb_sequence(sequence_in=None, rb_len=10, seq_len=10000):
 		[rb_lt.append(x) for x in sequence_in[i-rb_len:i] if x<rb_lt[-1]]
 		#
 		rb_vals += [[i-1, len(rb_gt), len(rb_lt)]]
-		rb_vals[-1]+=[float(rb_vals[-1][-2])/float(rb_vals[-1][-1])]
-		rb_vals[-1]+=[math.log10(rb_vals[-1][-1])/log_N]
+		rb_vals[-1]+=[float(rb_vals[-1][-2])/float(rb_vals[-1][-1])]		# record-breaking ratio
+		rb_vals[-1]+=[math.log10(rb_vals[-1][-1])/log_N]					# "normalized" record-breaking ratio
 	rb_vals = numpy.core.records.fromarrays(zip(*rb_vals), names=dtype_names, formats=[type(x).__name__ for x in rb_vals[0]])
 	return rb_vals	
 		
@@ -191,21 +191,30 @@ def rb_runs_report(rb_runs_data=None, rblen=128, seq_len=100000, log_norm=True, 
 			run_stats[key]['mode_run_len'] = [None, None]
 		#
 		these_lengths = [x for x in run_stats[key]['run_lengths']]
-		#Ns = [x/float(len(these_lengths)) for x in range(1, len(these_lengths)+1)]
-		Ns = [x/float(total_N_runs) for x in range(1, len(these_lengths)+1)]
-		these_lengths.sort()
+		norm_run_lengths = [x/float(rblen) for x in these_lengths]
+		#
+		#Ns = [x/float(total_N_runs) for x in range(1, len(these_lengths)+1)]
+		Ns = [x/float(total_N_runs) for x in range(1, len(norm_run_lengths)+1)]
+		#these_lengths.sort()
+		norm_run_lengths.sort()
 		if doplots:
 			#plt.gca().set_yscale('log')
 			#plt.gca().set_xscale('log')
 			plt.gca().set_yscale('linear')
 			plt.gca().set_xscale('linear')
-			plt.plot(these_lengths, Ns, '.-', label='parity: %d' % key)
+			#
+			# normalize run lengths by rb_len (basically by GR scaling, aka,. relative to the (expected)
+			# seismic sequence length
+			#plt.plot(these_lengths, Ns, '.-', label='parity: %d' % key)
+			#
+			#plt.plot([x/float(rblen) for x in these_lengths], Ns, '.-', label='parity: %d' % key)
+			plt.plot(norm_run_lengths, Ns, '.-', label='parity: %d' % key)
 		#
 	if doplots:
 		plt.legend(loc=0, numpoints=1)
-		plt.ylabel('Probability P(L)')
-		plt.xlabel('Length L')
-		plt.title('record-breaking runs report for %s' % test_catalog)
+		plt.ylabel('Probability $P(\\leq N_{run})$')
+		plt.xlabel('Normalized run-length $\Lambda = N_{run}/N_{rb}$')
+		plt.title('record-breaking runs report for %s' % cat_name)
 	#
 	print "summary report:"
 	for key, datas in run_stats.iteritems():
@@ -214,9 +223,13 @@ def rb_runs_report(rb_runs_data=None, rblen=128, seq_len=100000, log_norm=True, 
 	return run_stats
 #
 # instead of writing a wrapper function, just defind the prams dictionary:
-parkfield_rb_report_prams = {'data_file':'data/parkfield-elip-rbsequence.pkl', 'rb_len':310, 'fnum':0, 'random_len':100000, 'ave_len':None}
-emc_rb_report_prams = {'data_file':'data/emc_rb_sequence.pkl', 'rb_len':500, 'fnum':0, 'random_len':100000, 'ave_len':None}
-tohoku_rb_report_prams = {'data_file':'data/tohoku_rb_sequence.pkl', 'rb_len':220, 'fnum':0, 'random_len':100000, 'ave_len':None}
+parkfield_rb_report_prams = {'data_file':'data/parkfield-elip-rbsequence.pkl', 'rb_len':310, 'fnum':0, 'ave_len':None, 'cat_name':'Parkfield'}
+# alternatively (for parkfield):
+#parkfield_rb_report_prams = {'data_file':'data/parkfield-elip-rbsequence.pkl', 'targ_mag':5.96, 'm_c':1.5, 'm_t':7.6, 'fnum':0, 'random_len':100000, 'ave_len':None, 'cat_name':'Parkfield'}
+
+emc_rb_report_prams = {'data_file':'data/emc_rb_sequence.pkl', 'rb_len':500, 'fnum':0, 'ave_len':None, 'cat_name':'EMC'}
+tohoku_rb_report_prams = {'data_file':'data/tohoku_rb_sequence.pkl', 'rb_len':220, 'fnum':0, 'ave_len':None, 'cat_name':'Tohoku'}
+chi_chi_report_prams = {'data_file':'data/chichi-rb_sequence.pkl', 'rb_len':630, 'fnum':0, 'ave_len':None, 'cat_name':'Chi-chi'}
 #
 def chi_chi_rb_report(data_file='data/chichi-rb_sequence.pkl', rb_len=630, fnum=0, random_len=10000, ave_len=None):
 	return rb_stats_report(data_file=data_file, rb_len=rb_len, fnum=fnum, random_len=random_len)
@@ -225,11 +238,20 @@ def tohoku_rb_report(data_file='data/tohoku_rb_sequence.pkl', rb_len=220, fnum=0
 	return rb_stats_report(data_file=data_file, rb_len=rb_len, fnum=fnum, random_len=random_len, ave_len=ave_len)
 	#return rb_stats_report(*args, **kwargs)
 #
-def rb_stats_report(data_file='data/tohoku_rb_sequence.pkl', rb_len=220, fnum=0, random_len=10000, ave_len=None, cat_name='(tohoku)'):
+def rb_stats_report(data_file='data/tohoku_rb_sequence.pkl', rb_len=220, targ_mag=None, m_t=7.6, m_c=None, fnum=0, random_len=10000, ave_len=None, cat_name='(tohoku)'):
 	# we'll need to encode some of these data, but for now, we know that rb_len was 220 (probably).
 	# (a good guess for this is the first event number rw_0,item_0=219).
 	# ... so this generalized function was orignally written for Tohoku, so "tohoku" probably impies "test data",
 	# as opposed to "random control data"
+	#
+	#
+	random_len=int(random_len)
+	if targ_mag!=None:
+		# calculate the rb_len:
+		# note: it may be necessary to specify m_c:
+		# this gives a "rb-stats ready" rb_len, including an integer round/truncation so that averaging, etc. will be
+		# over integer intervals.
+		rb_len = getNsample(m=targ_mag, mc=m_c, mt=m_t, dm=1.0, b1=1.0, b2=1.5, dms0=1.0, doint=True, dmMode=1)
 	#
 	if ave_len==None:
 		ave_len = max(int(rb_len/10), 1)
@@ -238,6 +260,8 @@ def rb_stats_report(data_file='data/tohoku_rb_sequence.pkl', rb_len=220, fnum=0,
 		# and submit values like ave_len=1.0 when we mean 1. we could also require odd floats for this sort of work,
 		# aka 1.0 --> 1 but 1.1 (or 1.0001) --> 1.0001*max(int(rb_len/10), 1)
 		ave_len = int(ave_len*max(int(rb_len/10), 1))
+	#
+	print "rb_stats_report() for file: %s, rb_len:%d, random_len=%d" % (data_file, rb_len, random_len)
 	#	
 	rb_data = numpy.load(data_file)
 	z_data = zip(*rb_data)
@@ -267,7 +291,7 @@ def rb_stats_report(data_file='data/tohoku_rb_sequence.pkl', rb_len=220, fnum=0,
 	plt.figure(fnum)
 	plt.ion()
 	plt.clf()
-	plt.xlabel('normalized rb_ratio value, $abs(nrb_{gt}/nrb_{lt})$')
+	plt.xlabel('normalized rb_ratio value, $\\frac{\\log (nrb_{gt}/nrb_{lt})}{\\log (N)}$')
 	plt.ylabel('Probability $P(abs[r])$')
 	#
 	#Y = [x/float(len(tohoku_rb_gt)) for x in xrange(1, len(tohoku_rb_gt)+1)]	# prob assuming gt...
@@ -295,7 +319,7 @@ def rb_stats_report(data_file='data/tohoku_rb_sequence.pkl', rb_len=220, fnum=0,
 	############
 	# now, plot some random sequences for comparison:
 	#rand_plots = plot_rb_cdfs(cdf_in=None, rblen=rb_len, nits=10000, fnum=0, do_clf=True)
-	rand_cdf = random_rb_sequence(rblen=rb_len, nits=random_len)	# returns recarray with: [i, n_gt, n_lt, ratio, ratio_lognorm]
+	rand_cdf = random_rb_sequence(rblen=rb_len, nits=int(random_len))	# returns recarray with: [i, n_gt, n_lt, ratio, ratio_lognorm]
 	rand_lognorm = rand_cdf['ratio_lognorm'].copy()
 	rand_mean = [numpy.mean(rand_lognorm[max(0, i-ave_len):i]) for i in xrange(1, len(rand_lognorm)+1)]
 	#	
@@ -326,6 +350,7 @@ def rb_stats_report(data_file='data/tohoku_rb_sequence.pkl', rb_len=220, fnum=0,
 	#plt.plot(rand_ln_eq_mean, [x/float(random_len) for x in xrange(1,len(rand_ln_eq_mean)+1)], '.-', label='random_eq_mean')
 	#
 	plt.legend(loc=0, numpoints=1)
+	plt.savefig('output/%s_ratio_distributions.png' % cat_name)
 	#
 	#
 	# "Record-breaking runs" report:
@@ -356,13 +381,15 @@ def rb_stats_report(data_file='data/tohoku_rb_sequence.pkl', rb_len=220, fnum=0,
 	#
 	##
 	#random_run_stats = rb_runs_report(rb_runs_data=None, rblen=rb_len, seq_len=random_len, log_norm=True, doplots=False)
-	tohoku_run_stats = rb_runs_report(rb_runs_data=tohoku_runs, rblen=rb_len, log_norm=True, doplots=True, do_clf=True, fignum=7)
-	random_run_stats = rb_runs_report(rb_runs_data=random_runs, doplots=True, fignum=7, do_clf=False)
-	plt.title('raw runs (tohoku then random')
+	tohoku_run_stats = rb_runs_report(rb_runs_data=tohoku_runs, rblen=rb_len, log_norm=True, doplots=True, do_clf=True, fignum=7, cat_name=cat_name)
+	random_run_stats = rb_runs_report(rb_runs_data=random_runs, doplots=True, fignum=7, do_clf=False, cat_name=cat_name )
+	plt.title('raw runs %s then random' % cat_name)
+	plt.savefig('output/%s_raw_runs.png' % cat_name)
 	
-	tohoku_means = rb_runs_report(rb_runs_data=tohoku_runs_mean, rblen=rb_len, log_norm=True, doplots=True, fignum=8, do_clf=True)
-	random_run_means = rb_runs_report(rb_runs_data=random_runs_mean, doplots=True, do_clf=False, fignum=8)
-	plt.title('mean runs (tohoku, then random)')
+	tohoku_means = rb_runs_report(rb_runs_data=tohoku_runs_mean, rblen=rb_len, log_norm=True, doplots=True, fignum=8, do_clf=True, cat_name=cat_name)
+	random_run_means = rb_runs_report(rb_runs_data=random_runs_mean, doplots=True, do_clf=False, fignum=8, cat_name=cat_name)
+	plt.title('mean runs %s, then random)' % cat_name)
+	plt.savefig('output/%s_mean_runs.png' % cat_name)
 
 	#
 	#return tohoku2
@@ -398,5 +425,34 @@ def randtest():
 	#
 	for i in xrange(10):
 		print R1.random(), R2.random()
+#
+def getNsample(m, mc, mt=7.6, dm=1.0, b1=1.0, b2=1.5, dms0=1.0, doint=True, dmMode=1):
+	# dmMode: mode for calculating dm for large earthquakes. 0: relative to mainshock, 1: relative to weighted mean 
+	# calculated over (m-m_t) and (m_t-m_c). (see code below); default is (should be) to average.
+	targmag=m
+	if targmag<mt:
+		# "small" earthquake
+		winlen=10**(targmag-dm-dms0-mc)	# where 2.0 is dmstar + dmprime
+	if targmag>=mt:
+		# we want to use an average value for both dms and dm, so dm (like dms) is determined from
+		# the full sequence, not simply with respect to the mainshock.
+		dmfactor = (1.0*(mt-mc) + 1.5*(targmag-mt))/(targmag-mc)
+		#
+		#dms = dms0*(1.0*(mt-mc) + dms0*1.5*(targmag-mt))/(targmag-mc)
+		dms = dmfactor*dms0
+		if dmMode==1: thisdm = dmfactor*dm	# relative to full sequence.
+		if dmMode==0: thisdm = 1.5*dm		# relative to largest magnitude
+		#winlen = 10**(1.0*(mt-mc) + 1.5*(targmag-mt-1.0) - dms)
+		#winlen = 10**(1.0*(mt-mc) + 1.5*(targmag-mt-dm) - dms)
+		#
+		winlen = 10**(1.0*(mt-mc) + 1.5*(targmag-mt) - dms - thisdm)		# as opposed to dm reletive to b=1.5.
+	#
+	#winlen=int(10*round(winlen/10))
+	#print "winlen0: %d" % winlen
+	if doint: winlen=int(round(winlen,-1))
+	#print "winlen0: %d" % winlen
+	if winlen<1: winlen=1
+	#
+	return winlen
 			
 		
