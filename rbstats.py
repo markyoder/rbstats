@@ -177,6 +177,33 @@ def shannon_entropy(data_in=None, seq_len = 10000, f_mod=abs):
 	H = [-prob_index[f_mod(x)]*math.log10(prob_index[f_mod(x)]) for x in data_in]
 	#
 	return data_in, H
+#
+def permutation_entropy(data_in=None, p_len=10, seq_len=10000, f_mod=abs):
+	'''
+	# permutation entropy:
+	# basically, define a sequence S from X_input;
+	# S = {s_i} = {x_i<x_(i-1)<x_(i-2)...<x(i-p_len)}
+	# then, calc. the probability of each permutation, p(s_i) and calc. p log(p) from that.
+	'''
+	#
+	if f_mod==None: f_mod = lambda x:x
+	#
+	if data_in==None: 
+		R=random.Random()
+		#
+		data_in = [R.random() for j in xrange(seq_len)]
+	#
+	# first, get the permutation set S. we'll also make a permutation dict.
+	#permutation_set:
+	S=[]
+	permutation_dict={}
+	#
+	for j in xrange(len(data_in)-p_len):
+		#S+=[(data_in[i+1]>x for i,x in enumerate(data_in[j:j+p_len]))]
+		s_prime = zip(*[data_in[j:j_p_len], range(p_len)])
+		s_prime.sort(key = lambda x:x[0])
+		X+= [zip(s_prime[1])]	# keep the reordered range(), aka, the original positions.
+	#
 
 		
 
