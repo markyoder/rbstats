@@ -155,6 +155,30 @@ def rb_runs(rb_ratios=None, rblen=1, seq_len=100000, log_norm=True):
 	#	print key, len(rw), " :: ", float(len(rw))/float(seq_len)
 	#
 	return runs
+#
+def shannon_entropy(data_in=None, seq_len = 10000, f_mod=abs):
+	# shannon entropy, H = v-p log(p). note that p requires definition. we'll probably generalize these functions later;
+	# for now, let's use a cumulative probability, and for shannon entropy, based on the absolute value of the input.
+	# note that in questions of entropy and information, the definition of p is non-trivial.
+	#
+	if f_mod==None: f_mod = lambda x:x
+	#
+	if data_in==None: 
+		R=random.Random()
+		#
+		data_in = [R.random() for j in xrange(seq_len)]
+	#
+	#prob_set = data_in[:]
+	prob_set = [f_mod(x) for x in data_in]
+	#
+	prob_set.sort()
+	prob_index = {val:float(i+1.0)/float(len(data_in)) for i, val in enumerate(prob_set)}
+	#
+	H = [-prob_index[f_mod(x)]*math.log10(prob_index[f_mod(x)]) for x in data_in]
+	#
+	return data_in, H
+
+		
 
 def rb_runs_report(rb_runs_data=None, rblen=128, seq_len=100000, log_norm=True, fignum=0, doplots=True, do_clf=True, cat_name='(test catalog)'):
 	# some stats on record-breaking runs.
