@@ -3,6 +3,8 @@ import numpy
 import math
 import pylab as plt
 import scipy.stats
+import datetime as dtm
+import pytz
 
 plt.ion()
 
@@ -73,7 +75,7 @@ def nrb_sequence(sequence_in=None, rb_len=10, seq_len=10000):
 		
 #
 #def rb_cdfs(rblen=100, nits=10000):
-def random_rb_sequence(rblen=100, nits=10000):
+def random_rb_sequence_2(rblen=100, nits=10000):
 	# stats on record-breaking ratios of a random sequence.
 	# so what this bit does now (after being chopped up a bit) is to produce a sequence of 
 	# rb_intervals from nits sequences of length rblen.
@@ -99,6 +101,40 @@ def random_rb_sequence(rblen=100, nits=10000):
 		rb_vals[-1]+=[math.log10(rb_vals[-1][-1])/log_N]
 	#
 	rb_vals = numpy.core.records.fromarrays(zip(*rb_vals), names=dtype_names, formats=[type(x).__name__ for x in rb_vals[0]])
+	return rb_vals
+#
+def random_rb_sequence(rblen=100, seq_len=10000):
+	# stats on record-breaking ratios of a random sequence.
+	# so what this bit does now (after being chopped up a bit) is to produce a sequence of 
+	# rb_intervals from nits sequences of length rblen.
+	#
+	R=random.Random()
+	#
+	rb_vals = []
+	dtype_names = ['i', 'n_gt', 'n_lt', 'ratio', 'ratio_lognorm']
+	log_N = math.log10(rblen)
+	#
+	sequence = [R.random() for j in xrange(seq_len)]
+	#
+	#for i in xrange(rblen-1, len(sequence)):
+	for i, x in enumerate(sequence[rblen-1:]):
+		j=i+rblen
+		#
+		vals = sequence[i:j]
+		#
+		rb_gt = [vals[0]]
+		rb_lt = [vals[0]]
+		#
+		# get greater/lesser record-breaking sub-sequences.
+		[rb_gt.append(x) for x in vals[1:] if x>rb_gt[-1]]
+		[rb_lt.append(x) for x in vals[1:] if x<rb_lt[-1]] 
+		#
+		rb_vals += [[i, len(rb_gt), len(rb_lt)]]
+		rb_vals[-1]+=[float(rb_vals[-1][-2])/float(rb_vals[-1][-1])]
+		rb_vals[-1]+=[math.log10(rb_vals[-1][-1])/log_N]
+	#
+	rb_vals = numpy.core.records.fromarrays(zip(*rb_vals), names=dtype_names, formats=[type(x).__name__ for x in rb_vals[0]])
+	#return rb_vals, sequence
 	return rb_vals
 #
 def rb_ratio(rb_seq, log_norm=True):
@@ -156,7 +192,7 @@ def rb_runs(rb_ratios=None, rblen=1, seq_len=100000, log_norm=True):
 	#
 	return runs
 #
-def shannon_entropy(data_in=None, seq_len = 10000, f_mod=abs):
+def shannon_entropy(data_in=None, seq_len = 10000, f_mod=abs, log_base=2.):
 	# shannon entropy, H = v-p log(p). note that p requires definition. we'll probably generalize these functions later;
 	# for now, let's use a cumulative probability, and for shannon entropy, based on the absolute value of the input.
 	# note that in questions of entropy and information, the definition of p is non-trivial.
@@ -174,18 +210,25 @@ def shannon_entropy(data_in=None, seq_len = 10000, f_mod=abs):
 	prob_set.sort()
 	prob_index = {val:float(i+1.0)/float(len(data_in)) for i, val in enumerate(prob_set)}
 	#
-	H = [-prob_index[f_mod(x)]*math.log10(prob_index[f_mod(x)]) for x in data_in]
+	H = [-prob_index[f_mod(x)]*math.log(prob_index[f_mod(x)], log_base) for x in data_in]
 	#
 	return data_in, H
 #
-def permutation_entropy(data_in=None, p_len=10, seq_len=10000, f_mod=abs):
+def permutation_entropy(data_in=None, p_len=10, seq_len=10000, f_mod=None, log_base=2.):
 	'''
 	# permutation entropy:
 	# basically, define a sequence S from X_input;
 	# S = {s_i} = {x_i<x_(i-1)<x_(i-2)...<x(i-p_len)}
 	# then, calc. the probability of each permutation, p(s_i) and calc. p log(p) from that.
+	# use f_mod, a function, to modify the data value. example: for some record-breaking ratio sequence analyses,
+	# we might want to use abs( log(n_gt/n_lt) ), f_mod() = abs(). for no mod, pass None,
+	# and w'll construct a NULL function f(x) = x... of course, for this application, we want the raw values, but see
+	# the shannon_entropy, etc. functions. 
 	'''
 	#
+	if f_mod!=None:
+		data_in = [f_mod(x) for x in data_in]
+	# ... and just in case we use it later:
 	if f_mod==None: f_mod = lambda x:x
 	#
 	if data_in==None: 
@@ -196,15 +239,88 @@ def permutation_entropy(data_in=None, p_len=10, seq_len=10000, f_mod=abs):
 	# first, get the permutation set S. we'll also make a permutation dict.
 	#permutation_set:
 	S=[]
-	permutation_dict={}
+	S_index={}
+	n_norm = float(len(data_in))
 	#
 	for j in xrange(len(data_in)-p_len):
-		#S+=[(data_in[i+1]>x for i,x in enumerate(data_in[j:j+p_len]))]
-		s_prime = zip(*[data_in[j:j_p_len], range(p_len)])
-		s_prime.sort(key = lambda x:x[0])
-		X+= [zip(s_prime[1])]	# keep the reordered range(), aka, the original positions.
+		S+=[tuple([data_in[i+1]>x for i,x in enumerate(data_in[j:j+p_len])])]
+		#
+		#s_prime = zip(*[data_in[j:j + p_len], range(p_len)])
+		#s_prime.sort(key = lambda x:x[0])
+		#s_prime = [x for (y,x) in sorted(zip([data_in[j:j + p_len], xrange(p_len)))]
+		#S+= [zip(*s_prime)[1]]	# keep the reordered range(), aka, the original positions.
+		#
+		# in one line:
+		#S+= [tuple([x for (y,x) in sorted(zip(*[data_in[j:j + p_len], xrange(p_len)]))])]
+		#
+		# now, add to index:
+		#print "s[-1]: ", S[-1]
+		if not S_index.has_key(S[-1]): S_index[S[-1]]=0.0
+		#
+		S_index[S[-1]]+=1.0/n_norm
 	#
+	# now we have our permutation/proxy data S and our probability index S_index. lets calculate permutation entropy. assume
+	# the sequence is in temporal order with t(x_i)<t(x_{i+1}).
+	#
+	# return [X, H(x)] ?? do we want to return the dict?
+	#return S
+	#
+	H=[-S_index[s]*math.log(S_index[s], log_base) for s in S]
+	H = [None for x in xrange(p_len)] + H
+	#
+	#return [data_in, H], S_index
+	return H
 
+def plot_permutation_entropy(data_file=None, p_len=10, rand_len=10**5):
+	# for now, keep it simple and plot from a data file.
+	#
+	if data_file == None:
+		this_N = rand_len
+		R=random.Random()
+		rb_ratios_raw = [10.**(2.0*R.random()-1.) for i in xrange(this_N)]
+		t = range(this_N)
+	else:
+		#
+		rb_data = numpy.load(data_file)
+		z_data = zip(*rb_data)
+		rb_ratios_raw = z_data[4]
+		t= z_data[1]
+		#
+	H= permutation_entropy(data_in=rb_ratios_raw, p_len=p_len, log_base=2.)
+	#print len(H[0]), len(H[1]), len(d), len(t), len(rb_ratios_raw)
+	
+	#return H
+	
+	#return H,d
+	#
+	plt.figure(0)
+	plt.ion()
+	plt.clf()
+	plt.plot(t, H, '.-')
+	plt.xlabel('t')
+	plt.ylabel('H')
+	#
+	plt.figure(1)
+	plt.clf()
+	R_prime, H_prime = zip(*[[r,h] for (r,h) in sorted(zip(rb_ratios_raw,H))])
+	plt.plot(numpy.log10(R_prime), H_prime, '.')
+	#plt.plot([math.log10(x) for x in rb_ratios_raw], H, '.-')
+	#plt.plot(rb_ratios_raw, H, '.')
+	plt.xlabel('rb ratio')
+	plt.ylabel('H')
+	#
+	plt.figure(2)
+	plt.clf()
+	plt.plot(t, numpy.log10(rb_ratios_raw), '.-')
+	plt.xlabel('t')
+	plt.ylabel('rb_ratios')
+	#
+	plt.figure(3)
+	plt.clf()
+	plt.plot(t[p_len:], [math.log10(rb_ratios_raw[i])*H[i] if rb_ratios_raw[i]<1. else 0. for i in xrange(p_len, len(H))], '.-')
+	plt.plot([t[0], t[-1]], [0., 0.], 'k-')
+	plt.plot(dtm.datetime(2011, 3, 11, 14-9, 46, 24, tzinfo=pytz.timezone('UTC')), 0., 'r*', ms=18)
+	return [t, rb_ratios_raw, H]
 		
 
 def rb_runs_report(rb_runs_data=None, rblen=128, seq_len=100000, log_norm=True, fignum=0, doplots=True, do_clf=True, cat_name='(test catalog)'):
@@ -370,7 +486,7 @@ def rb_stats_report(data_file='data/tohoku_rb_sequence.pkl', rb_len=220, targ_ma
 	############
 	# now, plot some random sequences for comparison:
 	#rand_plots = plot_rb_cdfs(cdf_in=None, rblen=rb_len, nits=10000, fnum=0, do_clf=True)
-	rand_cdf = random_rb_sequence(rblen=rb_len, nits=int(random_len))	# returns recarray with: [i, n_gt, n_lt, ratio, ratio_lognorm]
+	rand_cdf = random_rb_sequence(rblen=rb_len, seq_len=int(random_len))	# returns recarray with: [i, n_gt, n_lt, ratio, ratio_lognorm]
 	rand_lognorm = rand_cdf['ratio_lognorm'].copy()
 	rand_mean = [numpy.mean(rand_lognorm[max(0, i-ave_len):i]) for i in xrange(1, len(rand_lognorm)+1)]
 	#	
