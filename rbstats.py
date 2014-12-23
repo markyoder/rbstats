@@ -192,6 +192,91 @@ def rb_runs(rb_ratios=None, rblen=1, seq_len=100000, log_norm=True):
 	#
 	return runs
 #
+def mean_entropy_random(seq_len=10000):
+	rb_lens = [4,256]
+	#
+	mean_H = []
+	#
+	for rb_len in xrange(rb_lens[0], rb_lens[1]):
+		H = shannon_entropy(zip(*random_rb_sequence(rblen=rb_len, seq_len=seq_len))[4])
+		mean_H += [[rb_len, numpy.mean(H)]]
+		print "<H>: %s" % mean_H[-1]
+	#
+	plt.figure(0)
+	plt.clf()
+	plt.plot(zip(*mean_H)[0], zip(*mean_H)[1], '.-')
+	#
+	return mean_H
+		
+#
+def mean_entropies(seq_len=100000):
+	# get a random sequence and random shannon entropy:
+	r1, h1 = shannon_entropy(seq_len=1000000)
+	rb_random = random_rb_sequence(rblen=220, seq_len=seq_len)
+	#
+	tohoku = numpy.load('data/tohoku_rb_sequence.pkl')
+	tohoku_ratios=zip(*tohoku)[5]
+	h_tohoku = shannon_entropy(data_in=tohoku_ratios)
+	mean_h_tohoku=numpy.mean(h_tohoku)
+	mean_h_tohoku_raw = numpy.mean(shannon_entropy(zip(*tohoku)[4]))
+	print numpy.mean(shannon_entropy(zip(*rb_random)[4])), mean_h_tohoku_raw, mean_h_tohoku
+	#
+	emc = numpy.load('data/emc_rb_sequence.pkl')
+	emc_ratios = zip(*emc)[4]
+	h_emc = shannon_entropy(data_in=emc_ratios)
+	mean_h_emc = numpy.mean(h_emc)
+	rb_random_emc = random_rb_sequence(rblen=500, seq_len=seq_len)
+	print numpy.mean(shannon_entropy(zip(*rb_random_emc)[4])), mean_h_emc
+	#
+	pf = numpy.load('data/parkfield-elip-rbsequence.pkl')
+	pf_ratios = zip(*pf)[4]
+	h_pf = shannon_entropy(data_in=pf_ratios)
+	mean_h_pf = numpy.mean(h_pf)
+	rb_random_pf = random_rb_sequence(rblen=290, seq_len=seq_len)
+	print numpy.mean(shannon_entropy(zip(*rb_random_pf)[4])), mean_h_pf
+	#
+	chichi=numpy.load('data/chichi-rb_sequence.pkl')
+	chichi_ratios = zip(*chichi)[4]
+	h_chichi = shannon_entropy(data_in=chichi_ratios)
+	mean_h_chichi = numpy.mean(h_chichi)
+	rb_random_chichi=random_rb_sequence(rblen=600, seq_len=seq_len)
+	print numpy.mean(shannon_entropy(zip(*rb_random_chichi)[4])), mean_h_chichi
+#
+def permutation_entropies(p_lens=[5,256], seq_len=100000):
+	tohoku = numpy.load('data/tohoku_rb_sequence.pkl')
+	tohoku_ratios=zip(*tohoku)[4]
+	
+	emc = numpy.load('data/emc_rb_sequence.pkl')
+	emc_ratios = zip(*emc)[4]
+	
+	pf = numpy.load('data/parkfield-elip-rbsequence.pkl')
+	pf_ratios = zip(*pf)[4]
+	
+	chichi=numpy.load('data/chichi-rb_sequence.pkl')
+	chichi_ratios = zip(*chichi)[4]
+	
+	ratioses = {'random_%d' % x:random_rb_sequence(rblen=x, seq_len=seq_len) for x in [16, 64, 256, 1024]}
+	ratioses['tohoku']=tohoku
+	ratioses['emc']=emc
+	ratioses['pf']=pf
+	ratioses['chichi']=chichi
+	#
+	plt.figure(0)
+	plt.clf()
+	#
+	for lbl, ratios in ratioses.iteritems():
+		print "lbl: %s" % lbl
+		Y = [numpy.mean(permutation_entropy(data_in=ratios, p_len=p_len)[p_len:]) for p_len in xrange(p_lens[0], p_lens[1])]
+		plt.plot(xrange(p_lens[0], p_lens[1]), Y, '.-', lw=2, label='%s'%lbl)
+		plt.draw()
+		plt.show()
+		#
+	#
+	plt.legend(loc=0, numpoints=1)
+		
+	
+		
+#
 def shannon_entropy(data_in=None, seq_len = 10000, f_mod=abs, log_base=2.):
 	# shannon entropy, H = v-p log(p). note that p requires definition. we'll probably generalize these functions later;
 	# for now, let's use a cumulative probability, and for shannon entropy, based on the absolute value of the input.
